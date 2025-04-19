@@ -1,7 +1,7 @@
 import prisma from "@/lib/db";
 import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
-import { authOptions } from "../auth/[...nextauth]/route";
+import { authOptions } from "@/lib/auth";
 import type { Todo } from "@/types/todo";
 import { z } from "zod";
 
