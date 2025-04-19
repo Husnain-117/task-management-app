@@ -14,7 +14,7 @@ interface UserWithPassword {
   image: string | null;
 }
 
-const authOptions: AuthOptions = {
+export const authOptions: AuthOptions = {
   adapter: PrismaAdapter(prisma),
   providers: [
     GoogleProvider({
@@ -78,7 +78,7 @@ const authOptions: AuthOptions = {
     },
   },
   debug: process.env.NODE_ENV === 'development',
-};
+} as const;
 
 const handler = NextAuth(authOptions);
 export { handler as GET, handler as POST };
