@@ -86,7 +86,7 @@ jest.mock('@/app/lib/prisma', () => ({
 
 describe('Tasks API', () => {
   const mockSession = {
-    user: { email: 'test@example.com' },
+    user: { email: 'test@example.com', id: 'user123' },
   };
 
   beforeEach(() => {
@@ -117,6 +117,13 @@ describe('Tasks API', () => {
       const response = await GET();
       expect(response.status).toBe(401);
     });
+
+    it('handles database errors gracefully', async () => {
+      (prisma.todo.findMany as jest.Mock).mockRejectedValue(new Error('Database error'));
+
+      const response = await GET();
+      expect(response.status).toBe(500);
+    });
   });
 
   describe('POST /api/tasks', () => {
@@ -136,6 +143,27 @@ describe('Tasks API', () => {
         },
       });
     });
+
+    it('validates task title length', async () => {
+      const mockTask = { title: '' };
+      const request = new Request('http://localhost/api/tasks', {
+        method: 'POST',
+        body: JSON.stringify(mockTask),
+      });
+
+      const response = await POST(request);
+      expect(response.status).toBe(400);
+    });
+
+    it('handles invalid JSON', async () => {
+      const request = new Request('http://localhost/api/tasks', {
+        method: 'POST',
+        body: 'invalid-json',
+      });
+
+      const response = await POST(request);
+      expect(response.status).toBe(400);
+    });
   });
 
   describe('DELETE /api/tasks', () => {
@@ -151,6 +179,24 @@ describe('Tasks API', () => {
           userId: mockSession.user.email,
         },
       });
+    });
+
+    it('handles non-existent task', async () => {
+      const taskId = '999';
+      (prisma.todo.delete as jest.Mock).mockRejectedValue(new Error('Not found'));
+      const request = new Request(`http://localhost/api/tasks?id=${taskId}`);
+
+      const response = await DELETE(request);
+      expect(response.status).toBe(404);
+    });
+
+    it('validates task ownership', async () => {
+      const taskId = '1';
+      (prisma.todo.delete as jest.Mock).mockRejectedValue(new Error('Unauthorized'));
+      const request = new Request(`http://localhost/api/tasks?id=${taskId}`);
+
+      const response = await DELETE(request);
+      expect(response.status).toBe(403);
     });
   });
 
@@ -174,6 +220,29 @@ describe('Tasks API', () => {
           completed: mockUpdate.completed,
         },
       });
+    });
+
+    it('validates update data', async () => {
+      const mockUpdate = { id: '1', title: '', completed: true };
+      const request = new Request('http://localhost/api/tasks', {
+        method: 'PUT',
+        body: JSON.stringify(mockUpdate),
+      });
+
+      const response = await PUT(request);
+      expect(response.status).toBe(400);
+    });
+
+    it('handles non-existent task update', async () => {
+      const mockUpdate = { id: '999', title: 'Updated Task', completed: true };
+      (prisma.todo.update as jest.Mock).mockRejectedValue(new Error('Not found'));
+      const request = new Request('http://localhost/api/tasks', {
+        method: 'PUT',
+        body: JSON.stringify(mockUpdate),
+      });
+
+      const response = await PUT(request);
+      expect(response.status).toBe(404);
     });
   });
 }); 
