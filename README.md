@@ -1,4 +1,4 @@
-# Task Manager Application
+# Task Manager Application With User Authentication
 
 A simple task management application built with Next.js, Prisma, and NextAuth.
 
